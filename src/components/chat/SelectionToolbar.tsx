@@ -1,7 +1,7 @@
-// components/chat/SelectionToolbar.tsx
+// src/components/chat/SelectionToolbar.tsx
 "use client";
 
-import type { SelectionState } from "../../hooks/useSelectionToolbar";
+import type { SelectionState } from "@/hooks/useSelectionToolbar";
 
 type SelectionToolbarProps = {
   selection: SelectionState;
