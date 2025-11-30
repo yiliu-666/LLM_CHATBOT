@@ -16,6 +16,11 @@ type Conversation = {
   title: string | null;
   createdAt: string;
   updatedAt: string;
+  lowConversationId: string | null;
+  lowConversation?: {
+    id: string;
+    title: string | null;
+  } | null;
 };
 
 export function ChatScreen() {
@@ -25,6 +30,8 @@ export function ChatScreen() {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null);
   const [loadingConversations, setLoadingConversations] = useState(false);
+
+
 
   // 悬浮小窗逻辑
   const {
@@ -57,6 +64,14 @@ export function ChatScreen() {
     }),
   });
 
+  const currentConversation = conversations.find(
+    (c) => c.id === currentConversationId,
+  );
+  const lowConversationId =
+    currentConversation?.lowConversation?.id ??
+    currentConversation?.lowConversationId ??
+    null;
+
   // 页面加载：获取会话列表
   useEffect(() => {
     async function loadConversations() {
@@ -64,7 +79,18 @@ export function ChatScreen() {
       try {
         const res = await fetch("/api/conversations");
         const data = await res.json();
-        const list: Conversation[] = data.conversations ?? [];
+        const allConversations: Conversation[] = data.conversations ?? [];
+        
+        // 过滤掉小窗会话：如果一个会话的 id 被其他会话的 lowConversationId 引用，说明它是小窗会话
+        const lowConversationIds = new Set(
+          allConversations
+            .map(c => c.lowConversationId)
+            .filter((id): id is string => id !== null)
+        );
+        const list = allConversations.filter(
+          c => !lowConversationIds.has(c.id)
+        );
+        
         setConversations(list);
 
         if (list.length > 0) {
@@ -84,7 +110,7 @@ export function ChatScreen() {
     loadConversations();
   }, []);
 
-  // currentConversationId 变化时加载消息
+  // currentConversationId 变化时加载消息（只加载主会话）
   useEffect(() => {
     if (!currentConversationId) return;
 
@@ -146,11 +172,10 @@ export function ChatScreen() {
                 <button
                   key={conv.id}
                   onClick={() => setCurrentConversationId(conv.id)}
-                  className={`w-full text-left px-4 py-3 text-sm border-b border-gray-100 dark:border-gray-800 ${
-                    active
-                      ? "bg-blue-50 dark:bg-blue-900/40 text-blue-600 dark:text-blue-200"
-                      : "hover:bg-gray-50 dark:hover:bg-gray-900"
-                  }`}
+                  className={`w-full text-left px-4 py-3 text-sm border-b border-gray-100 dark:border-gray-800 ${active
+                    ? "bg-blue-50 dark:bg-blue-900/40 text-blue-600 dark:text-blue-200"
+                    : "hover:bg-gray-50 dark:hover:bg-gray-900"
+                    }`}
                 >
                   <div className="font-medium truncate">
                     {conv.title || "未命名会话"}
@@ -228,11 +253,14 @@ export function ChatScreen() {
       />
 
       {/* 悬浮聊天小窗 */}
-      <FloatingChat
-        open={floatingOpen}
-        onOpenChange={handleOpenChange}
-        initialQuestion={floatingQuestion}
-      />
+      {lowConversationId && (
+        <FloatingChat
+          open={floatingOpen}
+          onOpenChange={handleOpenChange}
+          initialQuestion={floatingQuestion}
+          conversationId={lowConversationId}  // ⭐ 传入副会话的 id
+        />
+      )}
     </>
   );
 }

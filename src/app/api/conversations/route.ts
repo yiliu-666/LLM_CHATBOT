@@ -25,6 +25,15 @@ export async function POST(req: Request) {
   const conversation = await prisma.conversation.create({
     data: {
       title: title ?? '新对话',
+      lowConversation:{
+        create:{
+          title:(title ?? "新对话") + "（小窗）",
+        },
+
+      },
+    },
+    include: {
+      lowConversation: true,
     },
   });
 

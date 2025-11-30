@@ -9,27 +9,47 @@ type FloatingChatProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   initialQuestion?: string;
+  conversationId : string;
 };
 
-export function FloatingChat({ open, onOpenChange, initialQuestion }: FloatingChatProps) {
+export function FloatingChat({ open, onOpenChange, initialQuestion, conversationId }: FloatingChatProps) {
   const [input, setInput] = useState("");
 
-  const [threadId] = useState(() => crypto.randomUUID());
 
   const { messages, sendMessage, setMessages } = useChat<UIMessage>({
-    id: `floating-${threadId}`,
+    id: `floating-${conversationId}`,
     transport: new DefaultChatTransport({
       api: "/api/chat",
       prepareSendMessagesRequest({ messages }) {
         return {
           body: {
             messages,
-            conversationId: threadId,
+            conversationId,
           },
         };
       },
     }),
   });
+
+  // conversationId 变化时加载副会话的历史消息
+  useEffect(() => {
+    if (!conversationId) return;
+
+    async function loadHistory() {
+      try {
+        const res = await fetch(`/api/chat?conversationId=${conversationId}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        if (Array.isArray(data.messages)) {
+          setMessages(data.messages);
+        }
+      } catch (e) {
+        console.error("加载副会话历史消息失败", e);
+      }
+    }
+
+    loadHistory();
+  }, [conversationId, setMessages]);
 
   // initialQuestion 更新时，把内容放入输入框并打开小窗
   useEffect(() => {

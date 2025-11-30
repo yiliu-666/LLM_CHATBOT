@@ -20,8 +20,8 @@ export async function GET(req: Request) {
     orderBy: { createdAt: 'asc' },
   });
 
-  // 映射成 AI SDK 的 UIMessage 格式
-  const messages: UIMessage[] = rows.map((m) => ({
+  // 映射成 AI SDK 的 UIMessage 格式，并添加时间戳用于排序
+  const messages = rows.map((m) => ({
     id: m.id,
     role: m.role as any,
     parts: [
@@ -30,6 +30,7 @@ export async function GET(req: Request) {
         text: m.content,
       },
     ],
+    createdAt: m.createdAt.toISOString(), // 添加时间戳用于排序
   }));
 
   return new Response(
